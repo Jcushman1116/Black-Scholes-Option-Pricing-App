@@ -82,6 +82,8 @@ def rho(S, K, T, r, sigma, option_type="call"):
 
 st.title("Black-Scholes Option Pricing Calculator (European Only)")
 st.header("Base Option Inputs")
+option_type = st.selectbox("Select Option Type: " , ["call", "put"])
+
 
 col1, col2, col3, col4, col5 = st.columns(5)
 S = col1.number_input("Market Price", min_value=0.0, value = 100.0, step = 1.0)
@@ -91,13 +93,7 @@ sigma = col4.number_input("Volatility", min_value= 0.01, value = 0.2, step = 0.0
 r = col5.number_input("Risk Free Rate", min_value = 0.01, value = 0.05, step = 0.01)
 
 #Call and Put Variables
-call = black_scholes(S, K, T, r, sigma, option_type = "call")
-put = black_scholes(S, K, T, r, sigma, option_type = "put")
-
-col1, col2 = st.columns(2)
-col1.metric("Call Option Price", value = str(call.round(2)))
-col2.metric("Put Option Price", value = str(put.round(2)))
-
+option_price = black_scholes(S, K, T, r, sigma, option_type)
 st.header("Shock Parameters") 
 spot_shock = st.slider("Spot Price Shock (%)", min_value = -99, max_value = 100, value= 0) 
 vol_shock = st.slider("Volatility Shcok (%)", min_value = -99, max_value = 100, value= 0)
@@ -105,76 +101,60 @@ vol_shock = st.slider("Volatility Shcok (%)", min_value = -99, max_value = 100, 
 s_shock = S * (1 + spot_shock/100)
 v_shock = sigma * (1 + vol_shock/100)
 
-s_call = black_scholes(s_shock, K, T, r, v_shock, option_type= "call")
-s_put = black_scholes(s_shock, K, T,r, v_shock, option_type= "put")
+s_option = black_scholes(s_shock, K, T, r, v_shock, option_type)
+
+col1, col2 = st.columns(2)
+
+if option_type == "call": 
+    col1.metric("Call Option Price", value = str(option_price.round(2)))
+    col2.metric("Call Option Price (Shocked)", value = str(s_option.round(2)))
+else: 
+    col1.metric("Put Option Price", value = str(option_price.round(2)))
+    col2.metric("Put Option Price (Shocked)", value = str(s_option.round(2)))
+    
 
 st.divider()
-col1.metric("Call Option (Shocked)", value = str(s_call.round(2)))
-col2.metric("Put Option (Shocked)", value = str(s_put.round(2)))
+delta_value = delta(S, K, T, r, sigma, option_type)
+gamma_value = gamma(S, K, T, r, sigma)
+vega_value = vega(S, K, T, r, sigma)
+theta_value = theta(S, K, T, r, sigma, option_type)  
+rho_value = rho(S, K, T, r, sigma, option_type)
 
+s_delta = delta(s_shock,K,T,r, v_shock, option_type)
+s_gamma = gamma(s_shock,K,T,r, v_shock)
+s_vega = vega(s_shock,K,T,r, v_shock)
+s_theta = theta(s_shock,K,T,r, v_shock,option_type)
+s_rho = rho(s_shock,K,T,r, v_shock,option_type)
 
+if option_type == "call": 
+    st.header("Call Option Greeks") 
+else: 
+    st.header("Put Option Greeks")
 
-c_delta = delta(S, K, T, r, sigma, option_type= "call")
-c_gamma = gamma(S, K, T, r, sigma)
-c_vega = vega(S, K, T, r, sigma)
-c_theta = theta(S, K, T, r, sigma, option_type= "call")  
-c_rho = rho(S, K, T, r, sigma, option_type= "call")
-
-p_delta = delta(S, K, T, r, sigma, option_type= "put")
-p_gamma = gamma(S, K, T, r, sigma,)
-p_vega = vega(S, K, T, r, sigma)
-p_theta = theta(S, K, T, r, sigma, option_type= "put")  
-p_rho = rho(S, K, T, r, sigma, option_type= "put")
-
-
-c_s_delta = delta(s_shock,K,T,r, v_shock, option_type= "call")
-c_s_gamma = gamma(s_shock,K,T,r, v_shock)
-c_s_vega = vega(s_shock,K,T,r, v_shock)
-c_s_theta = theta(s_shock,K,T,r, v_shock,option_type= "call")
-c_s_rho = rho(s_shock,K,T,r, v_shock,option_type= "call")
-
-p_s_delta = delta(s_shock,K,T,r, v_shock, option_type= "put")
-p_s_gamma = gamma(s_shock,K,T,r, v_shock)
-p_s_vega = vega(s_shock,K,T,r, v_shock)
-p_s_theta = theta(s_shock,K,T,r, v_shock,option_type= "put")
-p_s_rho = rho(s_shock,K,T,r, v_shock,option_type= "put")
-
-st.header("Call Option Greeks") 
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Delta", value = str(c_delta.round(2)))
-col2.metric("Gamma", value = str(c_gamma.round(2)))
-col3.metric("Vega", value = str(c_vega.round(2)))
-col4.metric("Theta", value = str(c_theta.round(2)))
-col5.metric("Rho", value = str(c_rho.round(2)))
+col1.metric("Delta", value = str(delta_value.round(2)))
+col2.metric("Gamma", value = str(gamma_value.round(2)))
+col3.metric("Vega", value = str(vega_value.round(2)))
+col4.metric("Theta", value = str(theta_value.round(2)))
+col5.metric("Rho", value = str(rho_value.round(2)))
 
-st.header("Call Option Greeks (Shocked)") 
+if option_type == "call": 
+    st.header("Call Option Greeks (Shocked)") 
+else: 
+    st.header("Put Option Greeks (Shocked)")
+
 col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Delta", value = str(c_s_delta.round(2)))
-col2.metric("Gamma", value = str(c_s_gamma.round(2)))
-col3.metric("Vega", value = str(c_s_vega.round(2)))
-col4.metric("Theta", value = str(c_s_theta.round(2)))
-col5.metric("Rho", value = str(c_s_rho.round(2)))
+col1.metric("Delta", value = str(s_delta.round(2)))
+col2.metric("Gamma", value = str(s_gamma.round(2)))
+col3.metric("Vega", value = str(s_vega.round(2)))
+col4.metric("Theta", value = str(s_theta.round(2)))
+col5.metric("Rho", value = str(s_rho.round(2)))
 
-st.header("Put Option Greeks") 
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Delta", value = str(p_delta.round(2)))
-col2.metric("Gamma", value = str(p_gamma.round(2)))
-col3.metric("Vega", value = str(p_vega.round(2)))
-col4.metric("Theta", value = str(p_theta.round(2)))
-col5.metric("Rho", value = str(p_rho.round(2)))
-
-st.header("Put Option Greeks (Shocked)") 
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Delta", value = str(p_s_delta.round(2)))
-col2.metric("Gamma", value = str(p_s_gamma.round(2)))
-col3.metric("Vega", value = str(p_s_vega.round(2)))
-col4.metric("Theta", value = str(p_s_theta.round(2)))
-col5.metric("Rho", value = str(p_s_rho.round(2)))
-st.divider()
-
-st.header("Option Price Heatmap")
-heatmap_option = st.selectbox("Select Option Type: " , ["call", "put"])
-heatmap = option_heatmap(K, T, r, option_type= heatmap_option)
+if option_type == "call": 
+    st.header("Call Option Price Heatmap") 
+else: 
+    st.header("Put Option Price Heatmap")
+heatmap = option_heatmap(K, T, r, option_type)
 st.pyplot(heatmap)
 
 # The next thing to do is make it so that each thing is configurable for call/put from the start
