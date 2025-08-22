@@ -23,29 +23,38 @@ def black_scholes(S, K, T, r, sigma, option_type="call"):
     else:
         return K * exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1)
 
-def option_heatmap(K, T, r, option_type="call"):
-    spot_price = np.linspace(80, 120, 21)
-    volatilities = np.linspace(0.1, 0.5, 21)
+def option_heatmap(S, K, T, r, sigma, option_type="call", n_points = 11):
+    spot_price = np.linspace(S * 0.8, S * 1.2, n_points) 
+    volatilities = np.linspace(max(0.01, sigma * 0.5), sigma * 1.5, n_points)
     price_matrix = [
         [black_scholes(S, K, T, r, sigma, option_type) for S in spot_price]
         for sigma in volatilities
     ]
     df_prices = pd.DataFrame(price_matrix, index=volatilities, columns=spot_price)
-    fig, ax = plt.subplots(figsize=(20, 8))
-    sns.heatmap(df_prices, cmap='coolwarm', annot = True, fmt=".2f", xticklabels=5, yticklabels=5, ax=ax)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.heatmap(df_prices, cmap='coolwarm', annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
     ax.set_title(f"{option_type.capitalize()} Option Prices Heatmap")
     ax.set_xlabel("Spot Price")
     ax.set_ylabel("Volatility")
     return fig
 
-#def PnL_heatmap
+def PnL_heatmap(S,K,T,r,sigma, option_type= "call", n_points= 11):
+    spot_price = np.linspace(S * 0.8, S * 1.2, n_points)
+    volatilities = np.linspace(max(0.01, sigma * 0.5), sigma * 1.5, n_points)
+    purchase_price = black_scholes(S, K, T, r, sigma, option_type)
+    
+    pnl_matrix = [[black_scholes(S_new, K, T, r, sigma_new, option_type) - purchase_price 
+                  for S_new in spot_price]
+                  for sigma_new in volatilities]
 
-#heatmap number 2
-#for i, vol in enumerate(vol_range):
- #   for j, spot in enumerate(spot_range):
-  #      call_price = black_scholes(spot, K, T, r, vol, option_type="call")
-   ##    call_pnl[i, j] = call_price - purchase_call_price
-     #   put_pnl[i, j] = put_price - purchase_put_price
+    df_pnl = pd.DataFrame(pnl_matrix, index=volatilities, columns=spot_price)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.heatmap(df_pnl, cmap='coolwarm', annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
+    ax.set_title(f"{option_type.capitalize()} Option PnL Heatmap")
+    ax.set_xlabel("Spot Price")
+    ax.set_ylabel("Volatility")
+    return fig
+
 
 def d1(S, K, T, r, sigma):
     return (log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))
@@ -119,7 +128,7 @@ gamma_value = gamma(S, K, T, r, sigma)
 vega_value = vega(S, K, T, r, sigma)
 theta_value = theta(S, K, T, r, sigma, option_type)  
 rho_value = rho(S, K, T, r, sigma, option_type)
-
+ 
 s_delta = delta(s_shock,K,T,r, v_shock, option_type)
 s_gamma = gamma(s_shock,K,T,r, v_shock)
 s_vega = vega(s_shock,K,T,r, v_shock)
@@ -150,21 +159,31 @@ col3.metric("Vega", value = str(s_vega.round(2)))
 col4.metric("Theta", value = str(s_theta.round(2)))
 col5.metric("Rho", value = str(s_rho.round(2)))
 
+n_points = st.slider("Heatmap Grid Size", min_value=5, max_value=25, value=11)
 if option_type == "call": 
     st.header("Call Option Price Heatmap") 
 else: 
     st.header("Put Option Price Heatmap")
-heatmap = option_heatmap(K, T, r, option_type)
+heatmap = option_heatmap(s_shock,K, T, r, v_shock,option_type, n_points)
 st.pyplot(heatmap)
 
-# The next thing to do is make it so that each thing is configurable for call/put from the start
-# One box at the top that give calls or puts and then everyhting follows suit
-#This will help avoid the cluster of data and hopefully run time as well. 
- 
-#after that fix is addind a PnL Heatmap. 
-#Things to consider. should the heatmap be dynamic and adjust to the shocks automatically 
-#OR is it better to have 2 seperate graphs
+st.divider()
 
+if option_type == "call":
+    st.header("Call Option PnL Hetamap")
+else:
+    st.header("Put Option PnL Hetamap")
+    
+Heatmap_2 = PnL_heatmap(s_shock, K, T, r, v_shock, option_type, n_points)
+st.pyplot(Heatmap_2)
+
+'''
+To Do: 
+    - make sure axis on heatmap round to 2 decimal places
+    - ensure heatmap is displaying proper values and add an example to show you know how it works. 
+    - changes the heatmap to have positive values diplayed in green and negative PnL displayed in Red.
+    - create implied volatility surface 
+'''
 
 
 
