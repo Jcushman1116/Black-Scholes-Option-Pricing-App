@@ -30,26 +30,30 @@ def option_heatmap(S, K, T, r, sigma, option_type="call", n_points = 11):
         [black_scholes(S, K, T, r, sigma, option_type) for S in spot_price]
         for sigma in volatilities
     ]
-    df_prices = pd.DataFrame(price_matrix, index=volatilities, columns=spot_price)
+    df_prices = pd.DataFrame(price_matrix, index=volatilities.round(2), columns=spot_price.round(2))
     fig, ax = plt.subplots(figsize=(12, 6))
-    sns.heatmap(df_prices, cmap='coolwarm', annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
+    sns.heatmap(df_prices, cmap='mako', annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
     ax.set_title(f"{option_type.capitalize()} Option Prices Heatmap")
     ax.set_xlabel("Spot Price")
     ax.set_ylabel("Volatility")
     return fig
 
-def PnL_heatmap(S,K,T,r,sigma, option_type= "call", n_points= 11):
+def PnL_heatmap(S,K,T,r,sigma, option_type= "call", purchase_price = 0, position= "long", n_points= 11):
     spot_price = np.linspace(S * 0.8, S * 1.2, n_points)
     volatilities = np.linspace(max(0.01, sigma * 0.5), sigma * 1.5, n_points)
-    purchase_price = black_scholes(S, K, T, r, sigma, option_type)
     
-    pnl_matrix = [[black_scholes(S_new, K, T, r, sigma_new, option_type) - purchase_price 
+    if position == 'long':
+        sign = 1
+    else: 
+        sign = -1 
+    
+    pnl_matrix = [[sign * (black_scholes(S_new, K, T, r, sigma_new, option_type) - purchase_price) 
                   for S_new in spot_price]
                   for sigma_new in volatilities]
 
-    df_pnl = pd.DataFrame(pnl_matrix, index=volatilities, columns=spot_price)
+    df_pnl = pd.DataFrame(pnl_matrix, index=volatilities.round(2), columns=spot_price.round(2))
     fig, ax = plt.subplots(figsize=(12, 6))
-    sns.heatmap(df_pnl, cmap='coolwarm', annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
+    sns.heatmap(df_pnl, cmap='RdGn', center = 0.0, annot = True, fmt=".2f", xticklabels=2, yticklabels=2, ax=ax)
     ax.set_title(f"{option_type.capitalize()} Option PnL Heatmap")
     ax.set_xlabel("Spot Price")
     ax.set_ylabel("Volatility")
@@ -92,6 +96,7 @@ def rho(S, K, T, r, sigma, option_type="call"):
 st.title("Black-Scholes Option Pricing Calculator (European Only)")
 st.header("Base Option Inputs")
 option_type = st.selectbox("Select Option Type: " , ["call", "put"])
+position = st.selectbox("Select Postion Type: ", ["long","short"])
 
 
 col1, col2, col3, col4, col5 = st.columns(5)
@@ -173,16 +178,15 @@ if option_type == "call":
     st.header("Call Option PnL Hetamap")
 else:
     st.header("Put Option PnL Hetamap")
-    
-Heatmap_2 = PnL_heatmap(s_shock, K, T, r, v_shock, option_type, n_points)
+
+purchase_price = st.number_input("Puchase Price", min_value= 0.0, value= 0.0, step = 1.0)
+
+Heatmap_2 = PnL_heatmap(s_shock, K, T, r, v_shock, option_type, purchase_price, position, n_points)
 st.pyplot(Heatmap_2)
 
 '''
 To Do: 
-    - make sure axis on heatmap round to 2 decimal places
-    - ensure heatmap is displaying proper values and add an example to show you know how it works. 
-    - changes the heatmap to have positive values diplayed in green and negative PnL displayed in Red.
-    - create implied volatility surface 
+    - ensure that the PnL graph is workign properly with an example and add more text to descibe the program with examples
 '''
 
 
